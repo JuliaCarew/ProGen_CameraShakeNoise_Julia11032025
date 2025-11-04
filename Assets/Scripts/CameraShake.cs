@@ -2,32 +2,65 @@ using UnityEngine;
 
 public class CameraShake : MonoBehaviour
 {
-    [SerializeField] Vector3 maximumTranslationShake = Vector3.one * 0.5f;
-    [SerializeField] float frequency = 5;
-
+    [Header("Shake Intensity")]
+    [Range(0f, 1f)]
+    [SerializeField] float horizontalShakeIntensity = 0.5f;
+    [Range(0f, 1f)]
+    [SerializeField] float verticalShakeIntensity = 0.5f;
+    [Range(0f, 10f)]
+    [SerializeField] float zoomShakeIntensity = 2f; // FOV change amount
+    
+    [Header("Shake Settings")]
+    [Range(0.1f, 10f)]
+    [SerializeField] float frequency = 5f;
+    [SerializeField] float baseFOV = 60f; // Base field of view
+    
     private float seed;
-
+    private Camera cam;
+    private Vector3 originalLocalPosition;
+    
     void Start()
     {
-        seed = Random.value; // random seed to have unique shake values
+        if (cam == null) cam = GetComponentInChildren<Camera>();
+        
+        // original local position
+        originalLocalPosition = transform.localPosition;
+        
+        // get random seed for each axis 
+        seed = Random.value * 100f; 
+        
+        // set base FOV 
+        if (cam != null && baseFOV > 0) cam.fieldOfView = baseFOV;
     }
 
     private void Update()
     {
-        TransformWithNoise();
+        ApplyCameraShake();
     }
 
-    void TransformWithNoise()
+    void ApplyCameraShake()
     {
-        transform.localPosition = new Vector3(
-        maximumTranslationShake.x * Mathf.PerlinNoise(seed, Time.time * frequency) * 2 - 1, // horizontal
-        maximumTranslationShake.y * Mathf.PerlinNoise(seed + 1, Time.time * frequency) * 2 - 1, // vertical
-        maximumTranslationShake.z * Mathf.PerlinNoise(seed + 2, Time.time * frequency) * 2 - 1 // a bit of zoom
+        float time = Time.time * frequency;
+        
+        // horizontal shake
+        float horizontalNoise = Mathf.PerlinNoise(seed, time) * 2f - 1f;
+        
+        // vertical shake 
+        float verticalNoise = Mathf.PerlinNoise(seed + 100f, time + 0.5f) * 2f - 1f;
+        
+        // apply shake to the camera
+        transform.localPosition = originalLocalPosition + new Vector3(
+            horizontalNoise * horizontalShakeIntensity,
+            verticalNoise * verticalShakeIntensity,
+            0f
         );
-    }
-
-    void ShakeZoom()
-    {
-        // shake camera in/out using Perlin noise   
+        
+        // apply FOV (zoom in/out)
+        if (cam != null)
+        {
+            float zoomNoise = Mathf.PerlinNoise(seed + 200f, time + 1f) * 2f - 1f;
+            float newFOV = baseFOV + (zoomNoise * zoomShakeIntensity);
+            cam.fieldOfView = newFOV;
+        }
     }
 }
