@@ -1,7 +1,11 @@
+using System.Collections;
+using Unity.Mathematics;
 using UnityEngine;
 
 public class CameraShake : MonoBehaviour
 {
+    #region Variables
+
     [Header("Shake Intensity")]
     [Range(0f, 1f)]
     [SerializeField] float horizontalShakeIntensity = 0.5f;
@@ -13,12 +17,24 @@ public class CameraShake : MonoBehaviour
     [Header("Shake Settings")]
     [Range(0.1f, 10f)]
     [SerializeField] float frequency = 5f;
-    [SerializeField] float baseFOV = 60f; // Base field of view
-    
+    [SerializeField] float baseFOV = 60f; // base field of view
+
+    [Header("Rotation")]
+    [Range(0f, 1f)]
+    [SerializeField] float rotationIntensityX;
+    [Range(0f, 1f)]
+    [SerializeField] float rotationIntensityY;
+    [Range(0f, 10f)]
+    [SerializeField] float rotationMagnitude = 2f;
+    [Range(0f, 10f)]
+    [SerializeField] float rotationShakeDuration = 2f;
+
     private float seed;
     private Camera cam;
     private Vector3 originalLocalPosition;
-    
+
+    #endregion
+
     void Start()
     {
         if (cam == null) cam = GetComponentInChildren<Camera>();
@@ -27,7 +43,7 @@ public class CameraShake : MonoBehaviour
         originalLocalPosition = transform.localPosition;
         
         // get random seed for each axis 
-        seed = Random.value * 100f; 
+        seed = UnityEngine.Random.value * 100f; 
         
         // set base FOV 
         if (cam != null && baseFOV > 0) cam.fieldOfView = baseFOV;
@@ -35,7 +51,14 @@ public class CameraShake : MonoBehaviour
 
     private void Update()
     {
-        ApplyCameraShake();
+        // ApplyCameraShake();
+        StartCoroutine(ApplyCameraRotation());
+    }
+
+    public void TestButton()
+    {
+        // ApplyCameraShake();
+        StartCoroutine(ApplyCameraRotation());
     }
 
     void ApplyCameraShake()
@@ -63,4 +86,30 @@ public class CameraShake : MonoBehaviour
             cam.fieldOfView = newFOV;
         }
     }
+
+    IEnumerator ApplyCameraRotation()
+    {
+        float elapsedTime = 0f;
+
+        while(elapsedTime < rotationShakeDuration)
+        {
+            float time = Time.time * frequency;
+
+            // perlin noise floats
+            float rotationX = Mathf.PerlinNoise(seed + rotationIntensityX, time) * rotationMagnitude;
+            float rotationY = Mathf.PerlinNoise(seed + 10 + rotationIntensityY, time) * rotationMagnitude;
+
+            // set position to quaternion euler
+            transform.localRotation = Quaternion.Euler(rotationX, rotationY, 0);
+
+            elapsedTime++;
+            yield return null;
+        }
+
+        // reset rotation
+        transform.rotation = transform.localRotation;
+    }
 }
+// animation curve to smoothly decrease intensity over duration
+// multiple shake sources
+// interface for shakers, heap to manage current shakes with different durations
